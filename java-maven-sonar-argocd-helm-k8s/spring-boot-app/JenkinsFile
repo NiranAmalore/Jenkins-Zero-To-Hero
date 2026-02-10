@@ -38,7 +38,7 @@ pipeline {
 
     stage('Build and Push Docker Image') {
       environment {
-        DOCKER_IMAGE = "abhishekf5/ultimate-cicd:${BUILD_NUMBER}"
+        DOCKER_IMAGE = "niranamalore/ultimate-cicd:${BUILD_NUMBER}"
         REGISTRY_CREDENTIALS = credentials('docker-cred')
       }
       steps {
@@ -47,7 +47,6 @@ pipeline {
             # QUICK FIX: install Docker CLI
             apt-get update
             apt-get install -y docker.io
-            docker --version
 
             cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
             docker build -t ${DOCKER_IMAGE} .
