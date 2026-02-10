@@ -11,7 +11,12 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
-        sh 'pwd && ls -la'
+      }
+    }
+
+    stage('Clean Workspace') {
+      steps {
+        sh 'rm -rf java-maven-sonar-argocd-helm-k8s/spring-boot-app/target || true'
       }
     }
 
@@ -62,22 +67,18 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh '''
-            pwd
-            ls -la
-
             git config user.email "niranamalore@gmail.com"
             git config user.name "Niran Amalore"
 
             sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" \
             java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+            git add .
             git commit -m "Update deployment image to version ${BUILD_NUMBER}" || true
             git push https://${GITHUB_TOKEN}@github.com/NiranAmalore/Jenkins-Zero-To-Hero HEAD:main
           '''
         }
       }
     }
-
   }
 }
