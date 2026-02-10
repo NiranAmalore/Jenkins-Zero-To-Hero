@@ -28,6 +28,8 @@ pipeline {
 
     stage('Checkout') {
       steps {
+        checkout scm
+        sh 'ls -la'
         sh 'echo Checkout stage passed'
         // git branch: 'main', url: 'https://github.com/NiranAmalore/Jenkins-Zero-To-Hero.git'
       }
@@ -85,6 +87,7 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh '''
+            git status
             git config user.email "niranamalore@gmail.com"
             git config user.name "NiranAmalore"
 
