@@ -2,7 +2,7 @@ pipeline {
   agent {
     docker {
       image 'maven:3.9.6-eclipse-temurin-17'
-      args '-v /var/run/docker.sock:/var/run/docker.sock'
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
 
@@ -11,12 +11,6 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
-      }
-    }
-
-    stage('Clean Workspace') {
-      steps {
-        sh 'rm -rf java-maven-sonar-argocd-helm-k8s/spring-boot-app/target || true'
       }
     }
 
