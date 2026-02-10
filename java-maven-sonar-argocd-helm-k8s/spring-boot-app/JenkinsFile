@@ -8,17 +8,13 @@ pipeline {
     }
   }
 
-  /*
-   * CRITICAL:
-   * Prevent Jenkins from doing a host-level checkout.
-   * All Git operations must happen inside the Docker container.
-   */
   options {
     skipDefaultCheckout(true)
   }
 
   environment {
-    APP_DIR    = "java-maven-sonar-argocd-helm-k8s/spring-boot-app"
+    REPO_URL  = "https://github.com/NiranAmalore/Jenkins-Zero-To-Hero.git"
+    APP_DIR   = "java-maven-sonar-argocd-helm-k8s/spring-boot-app"
     IMAGE_NAME = "niranamalore/ultimate-cicd"
   }
 
@@ -36,16 +32,23 @@ pipeline {
       }
     }
 
-    stage('Checkout') {
+    stage('Checkout (inside container)') {
       steps {
-        checkout scm
+        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+          sh '''
+            rm -rf Jenkins-Zero-To-Hero
+            git clone https://${GITHUB_TOKEN}@github.com/NiranAmalore/Jenkins-Zero-To-Hero.git
+            cd Jenkins-Zero-To-Hero
+            git checkout main
+          '''
+        }
       }
     }
 
     stage('Build and Test') {
       steps {
         sh '''
-          cd ${APP_DIR}
+          cd Jenkins-Zero-To-Hero/${APP_DIR}
           mvn clean package
         '''
       }
@@ -58,7 +61,7 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
           sh '''
-            cd ${APP_DIR}
+            cd Jenkins-Zero-To-Hero/${APP_DIR}
             mvn sonar:sonar \
               -Dsonar.login=$SONAR_AUTH_TOKEN \
               -Dsonar.host.url=${SONAR_URL}
@@ -74,7 +77,7 @@ pipeline {
       steps {
         script {
           sh '''
-            cd ${APP_DIR}
+            cd Jenkins-Zero-To-Hero/${APP_DIR}
             docker build -t ${DOCKER_IMAGE} .
           '''
           docker.withRegistry('https://index.docker.io/v1/', 'docker-cred') {
@@ -85,36 +88,26 @@ pipeline {
     }
 
     stage('Update Deployment File') {
-      environment {
-        GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
-        GIT_USER_NAME = "NiranAmalore"
-      }
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh '''
-            # Trust workspace (Git safety check)
-            git config --global --add safe.directory "$WORKSPACE"
+            cd Jenkins-Zero-To-Hero
 
             git config user.email "niranamalore@gmail.com"
             git config user.name "NiranAmalore"
 
-            # Attach detached HEAD to main branch
-            git checkout -B main origin/main
-
-            # Update image tag safely (idempotent)
             sed -i "s|\\(image: .*:\\).*|\\1${BUILD_NUMBER}|" \
               java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
             git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            # Commit only if there is an actual change
             if git diff --cached --quiet; then
               echo "No changes to commit. Skipping Git push."
               exit 0
             fi
 
             git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git main
+            git push https://${GITHUB_TOKEN}@github.com/NiranAmalore/Jenkins-Zero-To-Hero.git main
           '''
         }
       }
