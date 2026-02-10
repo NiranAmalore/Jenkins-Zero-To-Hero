@@ -17,10 +17,7 @@ pipeline {
     stage('Build and Test') {
       steps {
         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-          sh '''
-            rm -rf target || true
-            mvn clean package
-          '''
+          sh 'mvn clean package'
         }
       }
     }
@@ -49,11 +46,9 @@ pipeline {
       steps {
         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
           script {
-
             sh '''
               apt-get update
               apt-get install -y docker.io
-              docker --version
             '''
 
             sh 'docker build -t ${DOCKER_IMAGE} .'
@@ -70,17 +65,21 @@ pipeline {
     stage('Update Deployment File') {
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-          sh '''
-            git config user.email "niranamalore@gmail.com"
-            git config user.name "Niran Amalore"
+          script {
+            sh """
+              cd \$WORKSPACE
 
-            sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" \
-            java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+              git config user.email "niranamalore@gmail.com"
+              git config user.name "Niran Amalore"
 
-            git add .
-            git commit -m "Update deployment image to version ${BUILD_NUMBER}" || true
-            git push https://${GITHUB_TOKEN}@github.com/NiranAmalore/Jenkins-Zero-To-Hero HEAD:main
-          '''
+              sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" \
+              java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+
+              git add .
+              git commit -m "Update deployment image to version ${BUILD_NUMBER}" || true
+              git push https://\${GITHUB_TOKEN}@github.com/NiranAmalore/Jenkins-Zero-To-Hero HEAD:main
+            """
+          }
         }
       }
     }
