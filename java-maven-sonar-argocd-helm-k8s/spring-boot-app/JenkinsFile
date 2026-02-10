@@ -11,6 +11,7 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
+        sh 'pwd && ls -la'
       }
     }
 
@@ -61,6 +62,9 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh '''
+            pwd
+            ls -la
+
             git config user.email "niranamalore@gmail.com"
             git config user.name "Niran Amalore"
 
