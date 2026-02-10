@@ -73,33 +73,37 @@ agent {
       }
     }
 
-    stage('Update Deployment File') {
-      environment {
-        GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
-        GIT_USER_NAME = "NiranAmalore"
-      }
-      steps {
-        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-          sh '''
-            git config --global --add safe.directory "$WORKSPACE"
-            git config user.email "niranamalore@gmail.com"
-            git config user.name "NiranAmalore"
+stage('Update Deployment File') {
+  environment {
+    GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
+    GIT_USER_NAME = "NiranAmalore"
+  }
+  steps {
+    withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+      sh '''
+        git config --global --add safe.directory "$WORKSPACE"
+        git config user.email "niranamalore@gmail.com"
+        git config user.name "NiranAmalore"
 
-            sed -i "s|\\(image: .*:\\).*|\\1${BUILD_NUMBER}|" \
-              java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+        #  Attach detached HEAD to main
+        git checkout -B main origin/main
 
-            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+        sed -i "s|\\(image: .*:\\).*|\\1${BUILD_NUMBER}|" \
+          java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            if git diff --cached --quiet; then
-              echo "No changes to commit. Skipping Git push."
-              exit 0
-            fi
+        git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git main
-          '''
-        }
-      }
+        if git diff --cached --quiet; then
+          echo "No changes to commit. Skipping Git push."
+          exit 0
+        fi
+
+        git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git main
+      '''
     }
+  }
+}
+
   }
 }
